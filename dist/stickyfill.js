@@ -74,7 +74,7 @@
             rebuild();
             return;
         }
-        
+
         if (win.pageYOffset != scroll.top) {
             updateScrollPos();
             recalcAllPos();
@@ -125,7 +125,8 @@
 
         el.inited = true;
 
-        if (!el.clone) clone(el);
+        if (!el.clone && !el.isTableHeader) clone(el);
+        if (el.isTableHeader && el.parent.node.tagName === 'TABLE' && el.tableBody) calcTableShim(el);
         if (el.parent.computed.position != 'absolute' &&
             el.parent.computed.position != 'relative') el.parent.node.style.position = 'relative';
 
@@ -228,6 +229,24 @@
         el.node.parentNode.insertBefore(el.clone, refElement);
     }
 
+    function calcTableShim(el) {
+        var i, cell,
+            table = el.parent.node,
+            tableStyle = table.style;
+
+        tableStyle.marginBottom = el.height + parseNumeric(el.parent.node.getAttribute('data-original-margin-bottom')) + 'px';
+        el.tableBody.node.style.transform = 'translateY(' + el.height + 'px)';
+        el.tableBody.node.style['-ms-transform'] = 'translateY(' + el.height + 'px)';
+
+        el.node.style.zIndex = '2';
+
+        // Apply the cell widths to the header cells
+        for (i = 0; i < el.lastHeaderRowCells.length; i++) {
+            cell = el.lastHeaderRowCells[i];
+            cell.style.width = el.tableBody.cellWidths[i] + 'px';
+        }
+    }
+
     function killClone(el) {
         el.clone.parentNode.removeChild(el.clone);
         el.clone = undefined;
@@ -274,7 +293,7 @@
             },
             nodeOffset = getElementOffset(node),
             parentOffset = getElementOffset(parentNode),
-            
+
             parent = {
                 node: parentNode,
                 css: {
@@ -303,6 +322,7 @@
                     right: -nodeOffset.win.right + parentOffset.win.right - parent.numeric.borderRightWidth
                 },
                 css: css,
+                isTableHeader : computedStyle.display === 'table-header-group',
                 isCell: computedStyle.display == 'table-cell',
                 computed: computed,
                 numeric: numeric,
@@ -317,6 +337,36 @@
                         node.offsetHeight - numeric.top - numeric.marginBottom
                 }
             };
+
+            if ( ! parentNode.getAttribute('data-original-margin-bottom') ) {
+                parentNode.setAttribute('data-original-margin-bottom', parentComputedStyle.marginBottom);
+            }
+
+            if ( el.isTableHeader ) {
+                var tableBodyNode, lastHeaderRowCells, firstBodyRowCells, tableBody, cellWidths, cell, cellStyle, i;
+
+                tableBodyNode = parentNode.querySelector('tbody');
+                lastHeaderRowCells = el.node.querySelectorAll('tr:last-of-type > *');
+
+                if ( tableBodyNode ) {
+                    firstBodyRowCells = tableBodyNode.querySelectorAll('tr:first-of-type > *');
+                    cellWidths = [];
+
+                    for (i = 0; i < firstBodyRowCells.length; i++) {
+                        cell = firstBodyRowCells[i];
+                        cellStyle = getComputedStyle(cell);
+                        cellWidths.push(parseNumeric(cellStyle.width));
+                    }
+
+                    tableBody = {
+                        node: tableBodyNode,
+                        cellWidths : cellWidths
+                    };
+
+                    el.tableBody = tableBody;
+                    el.lastHeaderRowCells = lastHeaderRowCells;
+                }
+            }
 
         return el;
     }
@@ -390,11 +440,11 @@
         if (!initialized) return;
 
         deinitAll();
-        
+
         for (var i = watchArray.length - 1; i >= 0; i--) {
             watchArray[i] = getElementParams(watchArray[i].node);
         }
-        
+
         initAll();
     }
 
@@ -412,7 +462,7 @@
 
     function stop() {
         pause();
-        deinitAll(); 
+        deinitAll();
     }
 
     function kill() {
