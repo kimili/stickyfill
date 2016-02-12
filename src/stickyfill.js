@@ -126,7 +126,7 @@
         el.inited = true;
 
         if (!el.clone && !el.isTableHeader) clone(el);
-        if (el.isTableHeader && el.parent.node.tagName === 'TABLE' && el.tableBody) calcTableShim(el);
+        if (el.isTableHeader && el.parent.node.tagName === 'TABLE' && el.tableBody) { calcTableShim(el); }
         if (el.parent.computed.position != 'absolute' &&
             el.parent.computed.position != 'relative') el.parent.node.style.position = 'relative';
 
@@ -151,6 +151,11 @@
         };
 
         if (deinitParent) el.parent.node.style.position = el.parent.css.position;
+        if (el.lastHeaderRowCells) {
+            for (var i = 0; i < el.lastHeaderRowCells.length; i++) {
+                el.lastHeaderRowCells[i].removeAttribute('style');
+            }
+        }
         if (el.firstBodyRowCells) {
             for (var i = 0; i < el.firstBodyRowCells.length; i++) {
                 el.firstBodyRowCells[i].removeAttribute('style');
@@ -235,9 +240,19 @@
     }
 
     function calcTableShim(el) {
-        var i, cell, bodyCell,
+        var i, cell, cellStyle, cellWidths,
             table = el.parent.node,
             tableStyle = table.style;
+
+        // Measure the cell widths;
+        cellWidths = [];
+
+        for (i = 0; i < el.firstBodyRowCells.length; i++) {
+            cell = el.firstBodyRowCells[i];
+            cellStyle = getComputedStyle(cell);
+            w = Math.max(0, parseNumeric(cellStyle.width));
+            cellWidths.push(w);
+        }
 
         tableStyle.marginBottom = el.height + parseNumeric(el.parent.node.getAttribute('data-original-margin-bottom')) + 'px';
         el.tableBody.node.style.transform = 'translateY(' + el.height + 'px)';
@@ -246,13 +261,13 @@
         el.node.style.zIndex = '2';
 
         // Apply the cell widths to the header cells
-        for (i = 0; i < el.lastHeaderRowCells.length; i++) {
-            cell = el.lastHeaderRowCells[i];
-            bodyCell = el.firstBodyRowCells[i];
-            cell.style.width = el.tableBody.cellWidths[i] + 'px';
-            if ( bodyCell ) {
-                bodyCell.style.width = el.tableBody.cellWidths[i] + 'px';
-            }
+        if ( cellWidths.length ) {
+           // window.setTimeout(function(){
+                for (i = 0; i < el.lastHeaderRowCells.length; i++) {
+                    el.lastHeaderRowCells[i].style.width = cellWidths[i] + 'px';
+                    el.firstBodyRowCells[i].style.width = cellWidths[i] + 'px';
+                }
+           // }, 50);
         }
     }
 
@@ -352,25 +367,16 @@
             }
 
             if ( el.isTableHeader ) {
-                var tableBodyNode, lastHeaderRowCells, firstBodyRowCells, tableBody, cellWidths, cell, cellStyle, i;
+                var tableBodyNode, lastHeaderRowCells, firstBodyRowCells, tableBody;
 
                 tableBodyNode = parentNode.querySelector('tbody');
                 lastHeaderRowCells = el.node.querySelectorAll('tr:last-of-type > *');
 
                 if ( tableBodyNode ) {
                     firstBodyRowCells = tableBodyNode.querySelectorAll('tr:first-of-type > *');
-                    cellWidths = [];
-
-                    for (i = 0; i < firstBodyRowCells.length; i++) {
-                        cell = firstBodyRowCells[i];
-                        cellStyle = getComputedStyle(cell);
-                        var w = Math.max(0, parseNumeric(cellStyle.width));
-                        cellWidths.push(w);
-                    }
 
                     tableBody = {
-                        node: tableBodyNode,
-                        cellWidths : cellWidths
+                        node: tableBodyNode
                     };
 
                     el.tableBody = tableBody;
@@ -415,6 +421,25 @@
         clearInterval(checkTimer);
     }
 
+    function debounce(func, wait, immediate) {
+        var timeout;
+        return function() {
+            var context = this, args = arguments;
+            var later = function() {
+                timeout = null;
+                if ( ! immediate ) {
+                    func.apply(context, args);
+                }
+            }
+            var callNow = immediate && ! timeout;
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+            if ( callNow ) {
+                func.apply(context, args);
+            }
+        }
+    }
+
     function handlePageVisibilityChange() {
         if (!initialized) return;
 
@@ -424,6 +449,10 @@
         else {
             startFastCheckTimer();
         }
+    }
+
+    function resizeHandler() {
+        debounce(rebuild, 100);
     }
 
     function init() {
@@ -436,8 +465,8 @@
         win.addEventListener('wheel', onWheel);
 
         //watch for width changes
-        win.addEventListener('resize', rebuild);
-        win.addEventListener('orientationchange', rebuild);
+        win.addEventListener('resize', resizeHandler);
+        win.addEventListener('orientationchange', resizeHandler);
 
         //watch for page visibility
         doc.addEventListener(visibilityChangeEventName, handlePageVisibilityChange);
