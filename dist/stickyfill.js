@@ -5,6 +5,13 @@
  *
  * MIT License
  */
+/*!
+ * Stickyfill -- `position: sticky` polyfill
+ * v. 1.1.3 | https://github.com/wilddeer/stickyfill
+ * Copyright Oleg Korsunsky | http://wd.dizaina.net/
+ *
+ * MIT License
+ */
 (function(doc, win) {
     var watchArray = [],
         scroll,
@@ -151,6 +158,11 @@
         };
 
         if (deinitParent) el.parent.node.style.position = el.parent.css.position;
+        if (el.firstBodyRowCells) {
+            for (var i = 0; i < el.firstBodyRowCells.length; i++) {
+                el.firstBodyRowCells[i].removeAttribute('style');
+            }
+        }
         el.mode = -1;
     }
 
@@ -230,7 +242,7 @@
     }
 
     function calcTableShim(el) {
-        var i, cell,
+        var i, cell, bodyCell,
             table = el.parent.node,
             tableStyle = table.style;
 
@@ -243,7 +255,11 @@
         // Apply the cell widths to the header cells
         for (i = 0; i < el.lastHeaderRowCells.length; i++) {
             cell = el.lastHeaderRowCells[i];
+            bodyCell = el.firstBodyRowCells[i];
             cell.style.width = el.tableBody.cellWidths[i] + 'px';
+            if ( bodyCell ) {
+                bodyCell.style.width = el.tableBody.cellWidths[i] + 'px';
+            }
         }
     }
 
@@ -355,7 +371,8 @@
                     for (i = 0; i < firstBodyRowCells.length; i++) {
                         cell = firstBodyRowCells[i];
                         cellStyle = getComputedStyle(cell);
-                        cellWidths.push(parseNumeric(cellStyle.width));
+                        var w = Math.max(0, parseNumeric(cellStyle.width));
+                        cellWidths.push(w);
                     }
 
                     tableBody = {
@@ -365,6 +382,7 @@
 
                     el.tableBody = tableBody;
                     el.lastHeaderRowCells = lastHeaderRowCells;
+                    el.firstBodyRowCells = firstBodyRowCells;
                 }
             }
 
