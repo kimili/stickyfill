@@ -12,6 +12,13 @@
  *
  * MIT License
  */
+/*!
+ * Stickyfill -- `position: sticky` polyfill
+ * v. 1.1.3 | https://github.com/wilddeer/stickyfill
+ * Copyright Oleg Korsunsky | http://wd.dizaina.net/
+ *
+ * MIT License
+ */
 (function(doc, win) {
     var watchArray = [],
         scroll,
@@ -247,7 +254,7 @@
     }
 
     function calcTableShim(el) {
-        var i, cell, cellStyle, cellWidths,
+        var i, cell, cellStyle, cellWidths, w,
             table = el.parent.node,
             tableStyle = table.style;
 
@@ -428,25 +435,6 @@
         clearInterval(checkTimer);
     }
 
-    function debounce(func, wait, immediate) {
-        var timeout;
-        return function() {
-            var context = this, args = arguments;
-            var later = function() {
-                timeout = null;
-                if ( ! immediate ) {
-                    func.apply(context, args);
-                }
-            }
-            var callNow = immediate && ! timeout;
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-            if ( callNow ) {
-                func.apply(context, args);
-            }
-        }
-    }
-
     function handlePageVisibilityChange() {
         if (!initialized) return;
 
@@ -459,7 +447,7 @@
     }
 
     function resizeHandler() {
-        debounce(rebuild, 100);
+        debounce(rebuild, 50);
     }
 
     function init() {
@@ -472,8 +460,8 @@
         win.addEventListener('wheel', onWheel);
 
         //watch for width changes
-        win.addEventListener('resize', resizeHandler);
-        win.addEventListener('orientationchange', resizeHandler);
+        win.addEventListener('resize', rebuild);
+        win.addEventListener('orientationchange', rebuild);
 
         //watch for page visibility
         doc.addEventListener(visibilityChangeEventName, handlePageVisibilityChange);
