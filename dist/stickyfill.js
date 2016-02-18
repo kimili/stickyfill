@@ -104,17 +104,20 @@
         }
     }
 
-    function recalcElementPos(el) {
+    function recalcElementPos(el, force) {
         var start;
         if (!el.inited) {
             return;
         }
 
+        force = typeof force === 'boolean' ? force : false;
+
+
         start = el.isTableHeader ? el.limit.start - el.height : el.limit.start;
 
         var currentMode = (scroll.top <= start ? 0: scroll.top >= el.limit.end ? 2: 1);
 
-        if (el.mode != currentMode) {
+        if (el.mode !== currentMode || force) {
             switchElementMode(el, currentMode);
         }
     }
@@ -138,11 +141,15 @@
         el.inited = true;
 
         if (!el.clone && !el.isTableHeader) clone(el);
-        if (el.isTableHeader && el.parent.node.tagName === 'TABLE' && el.tableBody) { calcTableShim(el); }
         if (el.parent.computed.position != 'absolute' &&
             el.parent.computed.position != 'relative') el.parent.node.style.position = 'relative';
 
         recalcElementPos(el);
+
+        if (el.isTableHeader && el.parent.node.tagName === 'TABLE' && el.tableBody) {
+            calcTableShim(el);
+            recalcElementPos(el, true);
+        }
 
         el.parent.height = el.parent.node.offsetHeight;
         el.docOffsetTop = getDocOffsetTop(el.clone);
