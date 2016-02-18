@@ -5,13 +5,6 @@
  *
  * MIT License
  */
-/*!
- * Stickyfill -- `position: sticky` polyfill
- * v. 1.1.3 | https://github.com/wilddeer/stickyfill
- * Copyright Oleg Korsunsky | http://wd.dizaina.net/
- *
- * MIT License
- */
 (function(doc, win) {
     var watchArray = [],
         scroll,
@@ -105,9 +98,14 @@
     }
 
     function recalcElementPos(el) {
-        if (!el.inited) return;
+        var start;
+        if (!el.inited) {
+            return;
+        }
 
-        var currentMode = (scroll.top <= el.limit.start? 0: scroll.top >= el.limit.end? 2: 1);
+        start = el.isTableHeader ? el.limit.start - el.height : el.limit.start;
+
+        var currentMode = (scroll.top <= start ? 0: scroll.top >= el.limit.end ? 2: 1);
 
         if (el.mode != currentMode) {
             switchElementMode(el, currentMode);
@@ -168,6 +166,7 @@
                 el.firstBodyRowCells[i].removeAttribute('style');
             }
         }
+
         el.mode = -1;
     }
 
@@ -191,7 +190,7 @@
                 nodeStyle.position = 'absolute';
                 nodeStyle.left = el.offset.left + 'px';
                 nodeStyle.right = el.offset.right + 'px';
-                nodeStyle.top = el.offset.top + 'px';
+                nodeStyle.top = (el.isTableHeader ? (el.height * -1) : el.offset.top) + 'px';
                 nodeStyle.bottom = 'auto';
                 nodeStyle.width = 'auto';
                 nodeStyle.marginLeft = 0;
@@ -247,7 +246,7 @@
     }
 
     function calcTableShim(el) {
-        var i, cell, cellStyle, cellWidths, w,
+        var i, cell, cellStyle, cellWidths, w, previousMargin,
             table = el.parent.node,
             tableStyle = table.style;
 
@@ -261,20 +260,22 @@
             cellWidths.push(w);
         }
 
-        tableStyle.marginBottom = el.height + parseNumeric(el.parent.node.getAttribute('data-original-margin-bottom')) + 'px';
-        el.tableBody.node.style.transform = 'translateY(' + el.height + 'px)';
-        el.tableBody.node.style['-ms-transform'] = 'translateY(' + el.height + 'px)';
+        if ( el.parent.node.previousElementSibling ) {
+            previousMargin = parseInt(getComputedStyle(el.parent.node.previousElementSibling)['margin-bottom'], 10);
+            el.parent.node.style.marginTop = previousMargin + el.height + 'px';
+        } else {
+            el.parent.node.style.marginTop = el.height + 'px';
+        }
 
+        el.node.style.top = el.height * -1 + 'px';
         el.node.style.zIndex = '2';
 
         // Apply the cell widths to the header cells
         if ( cellWidths.length ) {
-           // window.setTimeout(function(){
-                for (i = 0; i < el.lastHeaderRowCells.length; i++) {
-                    el.lastHeaderRowCells[i].style.width = cellWidths[i] + 'px';
-                    el.firstBodyRowCells[i].style.width = cellWidths[i] + 'px';
-                }
-           // }, 50);
+            for (i = 0; i < el.lastHeaderRowCells.length; i++) {
+                el.lastHeaderRowCells[i].style.width = cellWidths[i] + 'px';
+                el.firstBodyRowCells[i].style.width = cellWidths[i] + 'px';
+            }
         }
     }
 
