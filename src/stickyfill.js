@@ -1,10 +1,3 @@
-/*!
- * Stickyfill -- `position: sticky` polyfill
- * v. 1.1.3 | https://github.com/wilddeer/stickyfill
- * Copyright Oleg Korsunsky | http://wd.dizaina.net/
- *
- * MIT License
- */
 (function(doc, win) {
     var watchArray = [],
         scroll,
@@ -12,6 +5,8 @@
         html = doc.documentElement,
         noop = function() {},
         checkTimer,
+        nativeSupport = false,
+        isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1,
 
         //visibility API strings
         hiddenPropertyName = 'hidden',
@@ -37,8 +32,10 @@
             block.style.position = prefixes[i] + 'sticky';
         }
         catch(e) {}
+        console.log(block.style.position);
         if (block.style.position != '') {
-            seppuku();
+            nativeSupport = true;
+            break;
         }
     }
 
@@ -512,10 +509,19 @@
     }
 
     function add(node) {
+        var unsupportedFirefoxNodes;
+
         //check if Stickyfill is already applied to the node
         for (var i = watchArray.length - 1; i >= 0; i--) {
             if (watchArray[i].node === node) return;
         };
+
+        unsupportedFirefoxNodes = ['thead', 'tbody', 'tfoot', 'tr'];
+
+        // No need to add if we have properly functioning native support
+        if ( (nativeSupport && ! isFirefox) || (nativeSupport && isFirefox && unsupportedFirefoxNodes.indexOf(node.tagName.toLowerCase()) === -1 ) ) {
+            return;
+        }
 
         var el = getElementParams(node);
 
