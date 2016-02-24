@@ -32,7 +32,6 @@
             block.style.position = prefixes[i] + 'sticky';
         }
         catch(e) {}
-        console.log(block.style.position);
         if (block.style.position != '') {
             nativeSupport = true;
             break;
