@@ -5,6 +5,13 @@
  *
  * MIT License
  */
+/*!
+ * Stickyfill -- `position: sticky` polyfill
+ * v. 1.1.3 | https://github.com/wilddeer/stickyfill
+ * Copyright Oleg Korsunsky | http://wd.dizaina.net/
+ *
+ * MIT License
+ */
 (function(doc, win) {
     var watchArray = [],
         scroll,
@@ -14,6 +21,7 @@
         checkTimer,
         nativeSupport = false,
         isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1,
+        isOldIE = (typeof document.documentMode === 'number' && document.documentMode <= 11),
 
         //visibility API strings
         hiddenPropertyName = 'hidden',
@@ -132,7 +140,9 @@
     }
 
     function initElement(el) {
-        if (isNaN(parseFloat(el.computed.top)) || el.isCell || el.computed.display == 'none') return;
+        if (isNaN(parseFloat(el.computed.top)) || el.isCell || el.computed.display == 'none') {
+            return;
+        }
 
         el.inited = true;
 
@@ -515,17 +525,18 @@
     }
 
     function add(node) {
-        var unsupportedFirefoxNodes;
+        var unsupportedNodes;
 
         //check if Stickyfill is already applied to the node
         for (var i = watchArray.length - 1; i >= 0; i--) {
             if (watchArray[i].node === node) return;
         };
 
-        unsupportedFirefoxNodes = ['thead', 'tbody', 'tfoot', 'tr'];
+        unsupportedNodes = ['thead', 'tbody', 'tfoot', 'tr'];
 
-        // No need to add if we have properly functioning native support
-        if ( (nativeSupport && ! isFirefox) || (nativeSupport && isFirefox && unsupportedFirefoxNodes.indexOf(node.tagName.toLowerCase()) === -1 ) ) {
+        // No need to add if we have properly functioning native support,
+        // OR if we're on old IE and we don't want to polyfill the unsupported nodes
+        if ( (nativeSupport && ! isFirefox) || (nativeSupport && isFirefox && unsupportedNodes.indexOf(node.tagName.toLowerCase()) === -1 ) || (isOldIE && unsupportedNodes.indexOf(node.tagName.toLowerCase()) > -1)) {
             return;
         }
 
